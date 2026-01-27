@@ -16,7 +16,7 @@ azd up  # Full deployment: ~10-12 minutes
 
 **Alternative**: Use GitHub's "Use this template" button or clone directly:
 ```powershell
-git clone https://github.com/microsoft-foundry/foundry-agent-webapp.git
+git clone https://github.com/yimingwang123/foundry-agent-webapp.git
 cd foundry-agent-webapp
 azd up
 ```
