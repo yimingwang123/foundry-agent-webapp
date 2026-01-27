@@ -4,17 +4,8 @@ AI-powered web application with Entra ID authentication and Azure AI Foundry Age
 
 ## Quick Start
 
-### Using this Template
+### Clone from Github
 
-```powershell
-# Clone or initialize from GitHub template
-azd init -t microsoft-foundry/foundry-agent-webapp
-
-# Deploy everything
-azd up  # Full deployment: ~10-12 minutes
-```
-
-**Alternative**: Use GitHub's "Use this template" button or clone directly:
 ```powershell
 git clone https://github.com/yimingwang123/foundry-agent-webapp.git
 cd foundry-agent-webapp
