@@ -184,6 +184,7 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
           status: 'idle',
           streamingMessageId: undefined,
           messages: updatedMessages,
+          lastResponseId: action.responseId || state.chat.lastResponseId,
         },
         ui: {
           ...state.ui,
@@ -243,6 +244,7 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
           status: 'idle',
           messages: [],
           currentConversationId: null,
+          lastResponseId: null,
           error: null,
           streamingMessageId: undefined,
         },

@@ -2,7 +2,7 @@ namespace WebApp.Api.Models;
 
 /// <summary>
 /// Represents a chunk of streaming response data.
-/// Can contain text content, annotations (citations), or MCP tool approval requests.
+/// Can contain text content, annotations (citations), MCP tool approval requests, or response metadata.
 /// </summary>
 public record StreamChunk
 {
@@ -22,6 +22,11 @@ public record StreamChunk
     public McpApprovalRequest? McpApprovalRequest { get; init; }
     
     /// <summary>
+    /// Response ID from completed streaming. Used to link subsequent messages in a conversation.
+    /// </summary>
+    public string? ResponseId { get; init; }
+    
+    /// <summary>
     /// Creates a text delta chunk.
     /// </summary>
     public static StreamChunk Text(string delta) => new() { TextDelta = delta };
@@ -37,6 +42,11 @@ public record StreamChunk
     public static StreamChunk McpApproval(McpApprovalRequest request) => new() { McpApprovalRequest = request };
     
     /// <summary>
+    /// Creates a response ID chunk for linking subsequent messages.
+    /// </summary>
+    public static StreamChunk WithResponseId(string responseId) => new() { ResponseId = responseId };
+    
+    /// <summary>
     /// Whether this chunk contains text content.
     /// </summary>
     public bool IsText => TextDelta != null;
@@ -50,6 +60,11 @@ public record StreamChunk
     /// Whether this chunk contains an MCP approval request.
     /// </summary>
     public bool IsMcpApprovalRequest => McpApprovalRequest != null;
+    
+    /// <summary>
+    /// Whether this chunk contains a response ID.
+    /// </summary>
+    public bool HasResponseId => ResponseId != null;
 }
 
 /// <summary>

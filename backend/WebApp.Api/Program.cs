@@ -100,11 +100,21 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         builder.Configuration.Bind("AzureAd", options);
         var configuredClientId = builder.Configuration["AzureAd:ClientId"];
+        var configuredTenantId = builder.Configuration["AzureAd:TenantId"];
 
         options.TokenValidationParameters.ValidAudiences = new[]
         {
             configuredClientId,
             $"api://{configuredClientId}"
+        };
+
+        // Accept both v1 and v2 issuer formats
+        // v1: https://sts.windows.net/{tenantId}/
+        // v2: https://login.microsoftonline.com/{tenantId}/v2.0
+        options.TokenValidationParameters.ValidIssuers = new[]
+        {
+            $"https://sts.windows.net/{configuredTenantId}/",
+            $"https://login.microsoftonline.com/{configuredTenantId}/v2.0"
         };
 
         options.TokenValidationParameters.NameClaimType = ClaimTypes.Name;
@@ -190,6 +200,7 @@ app.MapPost("/api/chat/stream", async (
         await WriteConversationIdEvent(httpContext.Response, conversationId, cancellationToken);
 
         var startTime = DateTime.UtcNow;
+        string? lastResponseId = null;
 
         await foreach (var chunk in agentService.StreamMessageAsync(
             conversationId,
@@ -212,6 +223,10 @@ app.MapPost("/api/chat/stream", async (
             {
                 await WriteMcpApprovalRequestEvent(httpContext.Response, chunk.McpApprovalRequest, cancellationToken);
             }
+            else if (chunk.HasResponseId && chunk.ResponseId != null)
+            {
+                lastResponseId = chunk.ResponseId;
+            }
         }
 
         var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
@@ -222,6 +237,7 @@ app.MapPost("/api/chat/stream", async (
             usage?.InputTokens ?? 0,
             usage?.OutputTokens ?? 0,
             usage?.TotalTokens ?? 0,
+            lastResponseId,
             cancellationToken);
 
         await WriteDoneEvent(httpContext.Response, cancellationToken);
@@ -308,7 +324,7 @@ static async Task WriteMcpApprovalRequestEvent(HttpResponse response, WebApp.Api
     await response.Body.FlushAsync(ct);
 }
 
-static async Task WriteUsageEvent(HttpResponse response, double duration, int promptTokens, int completionTokens, int totalTokens, CancellationToken ct)
+static async Task WriteUsageEvent(HttpResponse response, double duration, int promptTokens, int completionTokens, int totalTokens, string? responseId, CancellationToken ct)
 {
     var json = System.Text.Json.JsonSerializer.Serialize(new
     {
@@ -316,7 +332,8 @@ static async Task WriteUsageEvent(HttpResponse response, double duration, int pr
         duration,
         promptTokens,
         completionTokens,
-        totalTokens
+        totalTokens,
+        responseId
     });
     await response.WriteAsync($"data: {json}\n\n", ct);
     await response.Body.FlushAsync(ct);

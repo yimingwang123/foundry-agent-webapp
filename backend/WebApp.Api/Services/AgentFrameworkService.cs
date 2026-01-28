@@ -161,10 +161,16 @@ public class AgentFrameworkService : IDisposable
 
         CreateResponseOptions options = new() { StreamingEnabled = true };
 
-        // If continuing from MCP approval, link to previous response
-        if (!string.IsNullOrEmpty(previousResponseId) && mcpApproval != null)
+        // Link to previous response if provided (for conversation continuity)
+        if (!string.IsNullOrEmpty(previousResponseId))
         {
             options.PreviousResponseId = previousResponseId;
+            _logger.LogDebug("Linking to previous response: {ResponseId}", previousResponseId);
+        }
+
+        // If continuing from MCP approval, add approval response
+        if (mcpApproval != null)
+        {
             options.InputItems.Add(ResponseItem.CreateMcpApprovalResponseItem(
                 mcpApproval.ApprovalRequestId,
                 mcpApproval.Approved));
@@ -189,12 +195,18 @@ public class AgentFrameworkService : IDisposable
 
         // Dictionary to collect file search results for quote extraction
         var fileSearchQuotes = new Dictionary<string, string>();
+        int updateCount = 0;
+
+        _logger.LogDebug("Starting streaming enumeration for conversation: {ConversationId}", conversationId);
 
         await foreach (StreamingResponseUpdate update
             in responsesClient.CreateResponseStreamingAsync(
                 options: options,
                 cancellationToken: cancellationToken))
         {
+            updateCount++;
+            _logger.LogDebug("Received update #{Count}: {Type}", updateCount, update.GetType().Name);
+
             if (update is StreamingResponseOutputTextDeltaUpdate deltaUpdate)
             {
                 yield return StreamChunk.Text(deltaUpdate.Delta);
@@ -251,15 +263,38 @@ public class AgentFrameworkService : IDisposable
             else if (update is StreamingResponseCompletedUpdate completedUpdate)
             {
                 _lastUsage = completedUpdate.Response.Usage;
+                
+                // Yield the response ID so frontend can pass it for subsequent messages
+                if (!string.IsNullOrEmpty(completedUpdate.Response.Id))
+                {
+                    _logger.LogDebug("Response completed with ID: {ResponseId}", completedUpdate.Response.Id);
+                    yield return StreamChunk.WithResponseId(completedUpdate.Response.Id);
+                }
             }
             else if (update is StreamingResponseErrorUpdate errorUpdate)
             {
-                _logger.LogError("Stream error: {Error}", errorUpdate.Message);
-                throw new InvalidOperationException($"Stream error: {errorUpdate.Message}");
+                // Log all available error details - try to serialize the full object
+                string errorDetails;
+                try
+                {
+                    errorDetails = System.Text.Json.JsonSerializer.Serialize(errorUpdate);
+                }
+                catch
+                {
+                    errorDetails = errorUpdate.ToString() ?? "Unable to serialize error";
+                }
+                
+                _logger.LogError(
+                    "Stream error: Message={Message}, Code={Code}, Type={Type}, Details={Details}",
+                    errorUpdate.Message ?? "(null)",
+                    errorUpdate.Code ?? "(null)",
+                    errorUpdate.GetType().Name,
+                    errorDetails);
+                throw new InvalidOperationException($"Stream error: {errorUpdate.Message ?? errorUpdate.Code ?? "Unknown streaming error"}");
             }
         }
 
-        _logger.LogInformation("Completed streaming for conversation: {ConversationId}", conversationId);
+        _logger.LogInformation("Completed streaming for conversation: {ConversationId}, TotalUpdates: {Count}", conversationId, updateCount);
     }
 
     /// <summary>

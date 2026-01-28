@@ -22,6 +22,7 @@ export interface AppState {
     status: 'idle' | 'sending' | 'streaming' | 'error';
     messages: IChatItem[];
     currentConversationId: string | null;
+    lastResponseId: string | null; // Response ID for linking subsequent messages in conversation
     error: AppError | null; // Enhanced error object
     streamingMessageId?: string; // Which message is actively streaming
   };
@@ -47,7 +48,7 @@ export type AppAction =
   | { type: 'CHAT_STREAM_CHUNK'; messageId: string; content: string }
   | { type: 'CHAT_STREAM_ANNOTATIONS'; messageId: string; annotations: IAnnotation[] }
   | { type: 'CHAT_MCP_APPROVAL_REQUEST'; messageId: string; approvalRequest: IMcpApprovalRequest; previousResponseId: string | null }
-  | { type: 'CHAT_STREAM_COMPLETE'; usage: IUsageInfo }
+  | { type: 'CHAT_STREAM_COMPLETE'; usage: IUsageInfo; responseId?: string }
   | { type: 'CHAT_CANCEL_STREAM' }
   | { type: 'CHAT_ERROR'; error: AppError } // Enhanced error object
   | { type: 'CHAT_CLEAR_ERROR' } // Clear error state
@@ -67,6 +68,7 @@ export const initialAppState: AppState = {
     status: 'idle',
     messages: [],
     currentConversationId: null,
+    lastResponseId: null,
     error: null,
     streamingMessageId: undefined,
   },

@@ -131,13 +131,15 @@ export class ChatService {
     message: string,
     conversationId: string | null,
     imageDataUris: string[],
-    fileDataUris: Array<{ dataUri: string; fileName: string; mimeType: string }>
+    fileDataUris: Array<{ dataUri: string; fileName: string; mimeType: string }>,
+    previousResponseId?: string | null
   ): Record<string, any> {
     return {
       message,
       conversationId,
       imageDataUris: imageDataUris.length > 0 ? imageDataUris : undefined,
       fileDataUris: fileDataUris.length > 0 ? fileDataUris : undefined,
+      previousResponseId: previousResponseId || undefined,
     };
   }
 
@@ -184,6 +186,7 @@ export class ChatService {
    * @param messageText - The user's message text
    * @param currentConversationId - Current conversation ID (null for new conversations)
    * @param files - Optional array of files to attach (images and documents)
+   * @param previousResponseId - Response ID from last assistant message (for linking messages in conversation)
    * @throws {Error} If authentication fails or API request fails
    * 
    * @remarks
@@ -193,7 +196,8 @@ export class ChatService {
   async sendMessage(
     messageText: string,
     currentConversationId: string | null,
-    files?: File[]
+    files?: File[],
+    previousResponseId?: string | null
   ): Promise<void> {
     if (this.currentStreamAbort) {
       this.streamCancelled = true;
@@ -235,7 +239,8 @@ export class ChatService {
         messageText,
         currentConversationId,
         imageDataUris,
-        fileDataUris
+        fileDataUris,
+        previousResponseId
       );
 
       const response = await retryWithBackoff(
@@ -267,7 +272,7 @@ export class ChatService {
         : createAppError(
             error,
             getErrorCodeFromMessage(error),
-            () => this.sendMessage(messageText, currentConversationId, files)
+            () => this.sendMessage(messageText, currentConversationId, files, previousResponseId)
           );
 
       this.dispatch({ type: 'CHAT_ERROR', error: appError });
@@ -387,6 +392,7 @@ export class ChatService {
                   totalTokens: event.data.totalTokens,
                   duration: event.data.duration,
                 },
+                responseId: event.data.responseId,
               });
               break;
 

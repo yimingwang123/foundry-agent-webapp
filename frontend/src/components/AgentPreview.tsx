@@ -29,7 +29,7 @@ export const AgentPreview: React.FC<AgentPreviewProps> = ({ agentId: _agentId, a
   }, [apiUrl, getAccessToken, dispatch]);
 
   const handleSendMessage = async (text: string, files?: File[]) => {
-    await chatService.sendMessage(text, chat.currentConversationId, files);
+    await chatService.sendMessage(text, chat.currentConversationId, files, chat.lastResponseId);
   };
 
   const handleClearError = () => {
