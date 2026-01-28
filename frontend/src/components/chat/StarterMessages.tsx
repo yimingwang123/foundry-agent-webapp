@@ -20,9 +20,10 @@ interface IStarterMessageProps {
 
 // Default starter prompts when none are configured in Azure AI Foundry
 const defaultStarterPrompts = [
-  "How can you help me?",
-  "What are your capabilities?",
-  "Tell me about yourself",
+  "Was kostet ein Schengen-Visum?",
+  "Darf ich mit einem nationalen Visum durch andere Schengen-Länder reisen?",
+  "Wie prüfe ich einen Visumantrag korrekt?",
+  "Wie lange darf ich mit einem Schengen-Visum bleiben?",
 ];
 
 export const StarterMessages = ({
@@ -46,7 +47,7 @@ export const StarterMessages = ({
           logoUrl={agentLogo}
         />
         <Subtitle1 className={styles.welcome}>
-          {agentName ? `Hello! I'm ${agentName}` : "Hello! How can I help you today?"}
+          {agentName ? `Hallo! Ich bin ${agentName}` : "Hallo! Wie kann ich Ihnen helfen?"}
         </Subtitle1>
         {agentDescription && (
           <Body1 className={styles.caption}>{agentDescription}</Body1>
