@@ -198,11 +198,25 @@ public class AgentFrameworkService : IDisposable
         int updateCount = 0;
 
         _logger.LogDebug("Starting streaming enumeration for conversation: {ConversationId}", conversationId);
+        _logger.LogDebug("Request options: PreviousResponseId={PrevId}, InputItemCount={Count}",
+            options.PreviousResponseId ?? "(none)",
+            options.InputItems.Count);
 
-        await foreach (StreamingResponseUpdate update
-            in responsesClient.CreateResponseStreamingAsync(
+        IAsyncEnumerable<StreamingResponseUpdate> streamingResponse;
+        try
+        {
+            streamingResponse = responsesClient.CreateResponseStreamingAsync(
                 options: options,
-                cancellationToken: cancellationToken))
+                cancellationToken: cancellationToken);
+            _logger.LogDebug("CreateResponseStreamingAsync returned enumerable");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "CreateResponseStreamingAsync threw exception");
+            throw;
+        }
+
+        await foreach (StreamingResponseUpdate update in streamingResponse)
         {
             updateCount++;
             _logger.LogDebug("Received update #{Count}: {Type}", updateCount, update.GetType().Name);
@@ -270,6 +284,30 @@ public class AgentFrameworkService : IDisposable
                     _logger.LogDebug("Response completed with ID: {ResponseId}", completedUpdate.Response.Id);
                     yield return StreamChunk.WithResponseId(completedUpdate.Response.Id);
                 }
+            }
+            else if (update is StreamingResponseFailedUpdate failedUpdate)
+            {
+                // Log the failed response with all available details
+                string failedDetails;
+                try
+                {
+                    failedDetails = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        ResponseId = failedUpdate.Response?.Id,
+                        Status = failedUpdate.Response?.Status,
+                        Error = failedUpdate.Response?.Error
+                    });
+                }
+                catch
+                {
+                    failedDetails = failedUpdate.ToString() ?? "Unable to serialize failed response";
+                }
+                
+                _logger.LogError(
+                    "Stream failed: ResponseId={ResponseId}, Status={Status}, Details={Details}",
+                    failedUpdate.Response?.Id,
+                    failedUpdate.Response?.Status,
+                    failedDetails);
             }
             else if (update is StreamingResponseErrorUpdate errorUpdate)
             {

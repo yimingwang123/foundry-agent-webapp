@@ -22,8 +22,8 @@ interface IStarterMessageProps {
 const defaultStarterPrompts = [
   "Was kostet ein Schengen-Visum?",
   "Darf ich mit einem nationalen Visum durch andere Schengen-Länder reisen?",
-  "Wie prüfe ich einen Visumantrag korrekt?",
-  "Wie lange darf ich mit einem Schengen-Visum bleiben?",
+  "Was sind die wichtigsten Prüfschritte im Visumverfahren?",
+  "Welche Reisedokumente werden von der Schweiz nicht anerkannt?",
 ];
 
 export const StarterMessages = ({
